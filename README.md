@@ -644,7 +644,7 @@ usage: accl_logger.py [-h] [-s SERIAL_PORT] [-b {460800,230400,115200}] [--secs 
                       [--reduced_noise] [--dis_temp_stabil] [--ndflags] [--tempc] [--chksm] [--counter]
                       [--ext_trigger {disabled,ext_trig_pos,ext_trig_neg,1pps_pos,1pps_neg}] [--autostart]
                       [--init_default] [--flash_update] [--dump_reg] [--no_init] [--verbose] [--tag TAG]
-                      [--max_rows MAX_ROWS]
+                      [--max_rows MAX_ROWS | --rotate_secs ROTATE_SECS] [--no_data_timeout NO_DATA_TIMEOUT]
 
 This program is intended as sample code for evaluation testing the Epson device. This program will initialize the
 device with user specified arguments and retrieve sensor data and format the output to console or CSV file. Other
@@ -680,6 +680,9 @@ options:
   --ext_trigger {disabled,ext_trig_pos,ext_trig_neg,1pps_pos,1pps_neg}
                         specifies the external trigger mode on EXT pin. NOTE: Refer to datasheet for valid settings
                         for the model.
+  --no_data_timeout NO_DATA_TIMEOUT
+                        specifies to exit with an error when no sensor data is received for this many seconds, default
+                        600 seconds. 0 waits indefinitely.
 
 output field options:
   --ndflags             specifies to enable ND/EA flags in sensor data.
@@ -705,6 +708,9 @@ csv options:
   --csv                 specifies to read sensor data to CSV file otherwise sends to console.
   --tag TAG             specifies an extra string to append to end of the filename if CSV is enabled.
   --max_rows MAX_ROWS   specifies to split CSV files when the number of samples exceeds specified max_rows.
+  --rotate_secs ROTATE_SECS
+                        specifies to split CSV files at wall-clock boundaries of this many seconds (i.e., 3600 splits
+                        on every hour).
 ```
 
 ### VIBE Help Screen

@@ -35,7 +35,7 @@ import time
 from loguru import logger
 from tqdm import tqdm
 
-from esensorlib import sensor_device
+from esensorlib import accl_fn, sensor_device
 from esensorlib.example import helper
 
 SUPPORTED_MODELS = [
@@ -272,14 +272,37 @@ def get_args():
         default=None,
     )
 
-    group_csv.add_argument(
+    mutual_split = group_csv.add_mutually_exclusive_group()
+
+    mutual_split.add_argument(
         "--max_rows",
         help="specifies to split CSV files when the number of samples "
         "exceeds specified max_rows.",
         type=int,
     )
 
-    return parser.parse_args()
+    mutual_split.add_argument(
+        "--rotate_secs",
+        help="specifies to split CSV files at wall-clock boundaries of "
+        "this many seconds (i.e., 3600 splits on every hour).",
+        type=int,
+    )
+
+    parser.add_argument(
+        "--no_data_timeout",
+        help="specifies to exit with an error when no sensor data is "
+        "received for this many seconds, default 600 seconds. "
+        "0 waits indefinitely.",
+        type=float,
+        default=600,
+    )
+
+    args = parser.parse_args()
+    if args.rotate_secs is not None and args.rotate_secs <= 0:
+        parser.error("--rotate_secs must be greater than 0")
+    if args.no_data_timeout < 0:
+        parser.error("--no_data_timeout must not be negative")
+    return args
 
 
 def supported_device_model(prod_id):
@@ -367,6 +390,7 @@ if __name__ == "__main__":
         "temp_stabil": not args.dis_temp_stabil,
         "verbose": args.verbose,
         "no_init": args.no_init,
+        "no_data_timeout": args.no_data_timeout,
     }
     if args.verbose:
         logger.debug(f"device_cfg: {device_cfg}")
@@ -386,11 +410,21 @@ if __name__ == "__main__":
     # If CSV enabled, send tuple of strings for filename creation
     # otherwise None means output to console
     fname_param = None
+    name_suffix = []
     if args.csv:
         fname_param = fn_list
+        # set_writer() modifies the list passed to it, so keep a copy
+        name_suffix = fn_list[1:]
+
+    read_sample = accl.read_sample_unscaled if args.noscale else accl.read_sample
+    exit_code = 0
 
     accl.goto("sampling")
     try:
+        # Wait for the first sample before creating the CSV so that repeated
+        # restarts without incoming data do not leave header-only files
+        first_sample = read_sample(verbose=args.verbose)
+
         if args.csv and args.max_rows:
             # Append file_index for csv output and max_rows
             log.set_writer(to=fname_param + [f"{file_index:04}"])
@@ -399,20 +433,31 @@ if __name__ == "__main__":
         log.write_header(scale_mode=not args.noscale)
         # If csv enabled show progress indicator
         iter_samples = tqdm(range(num_samples)) if args.csv else range(num_samples)
+        rotate_period = (
+            int(time.time() // args.rotate_secs) if args.rotate_secs else None
+        )
 
         for i in iter_samples:
+            sample = first_sample if i == 0 else read_sample(verbose=args.verbose)
             # Create new CSV with header info when max_rows exceeded and increment file_index
             if args.csv and args.max_rows and (i != 0) and (i % args.max_rows) == 0:
                 file_index = file_index + 1
                 log.set_writer(to=fname_param + [f"{file_index:04}"])
                 log.write_header(scale_mode=not args.noscale)
-            if args.noscale:
-                log.write(sample_data=accl.read_sample_unscaled(verbose=args.verbose))
-            else:
-                log.write(sample_data=accl.read_sample(verbose=args.verbose))
+            # Create new CSV with header info when crossing a wall-clock boundary
+            if args.csv and args.rotate_secs:
+                current_period = int(time.time() // args.rotate_secs)
+                if current_period != rotate_period:
+                    rotate_period = current_period
+                    log.set_writer(to=[time.strftime("%Y%m%d-%H%M%S")] + name_suffix)
+                    log.write_header(scale_mode=not args.noscale)
+            log.write(sample_data=sample)
     except KeyboardInterrupt:
         pass
+    except accl_fn.NoDataTimeoutError as err:
+        logger.error(err)
+        exit_code = 1
     accl.goto("config")
     log.write_footer()
     log.get_dev_status()
-    sys.exit(0)
+    sys.exit(exit_code)

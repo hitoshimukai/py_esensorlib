@@ -64,6 +64,10 @@ class InvalidBurstReadError(Exception):
     """Exception class for malformed burst read access for device"""
 
 
+class NoDataTimeoutError(Exception):
+    """Exception class for no sensor data received within the timeout"""
+
+
 class AcclFn:
     """
     ACCL functions
@@ -1158,6 +1162,9 @@ class AcclFn:
         InvalidBurstReadError
             When header byte and delimiter byte is missing, find next header byte,
             and re-raise InvalidBurstReadError
+        NoDataTimeoutError
+            When "no_data_timeout" is set in set_config() and a complete
+            burst does not arrive within that many seconds
         KeyboardInterrupt
             When CTRL-C occurs, re-raise
         """
@@ -1176,8 +1183,17 @@ class AcclFn:
         if not self._status["uart_auto"]:
             self.regif.port_io.set_raw8(self.mdef.BURST_MARKER, 0x00, verbose)
 
+        no_data_timeout = self._cfg.get("no_data_timeout")
+        wait_start = time.monotonic()
+
         try:
             while self.regif.port_io.in_waiting() < data_struct.size:
+                if no_data_timeout and (
+                    time.monotonic() - wait_start > no_data_timeout
+                ):
+                    raise NoDataTimeoutError(
+                        f"** No sensor data received for {no_data_timeout} seconds"
+                    )
                 time.sleep(inter_delay)
             data_str = self.regif.port_io.read_bytes(data_struct.size)
 
