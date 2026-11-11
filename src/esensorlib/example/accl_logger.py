@@ -449,7 +449,14 @@ if __name__ == "__main__":
                 current_period = int(time.time() // args.rotate_secs)
                 if current_period != rotate_period:
                     rotate_period = current_period
-                    log.set_writer(to=[time.strftime("%Y%m%d-%H%M%S")] + name_suffix)
+                    # Name the file after the boundary itself. time.strftime()
+                    # without a time tuple uses C time(), which on Linux reads a
+                    # coarse clock that can lag time.time() by a few ms, giving
+                    # e.g. "045959" for the file starting at 05:00:00
+                    boundary = time.localtime(current_period * args.rotate_secs)
+                    log.set_writer(
+                        to=[time.strftime("%Y%m%d-%H%M%S", boundary)] + name_suffix
+                    )
                     log.write_header(scale_mode=not args.noscale)
             log.write(sample_data=sample)
     except KeyboardInterrupt:
