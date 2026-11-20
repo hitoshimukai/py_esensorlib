@@ -430,7 +430,9 @@ if __name__ == "__main__":
             log.set_writer(to=fname_param + [f"{file_index:04}"])
         else:
             log.set_writer(to=fname_param)
-        log.write_header(scale_mode=not args.noscale)
+        # Write only the column name row; the "#" header rows and the footer
+        # are omitted so the CSV holds just column names and data
+        log.write_header(scale_mode=not args.noscale, meta=False)
         # If csv enabled show progress indicator
         iter_samples = tqdm(range(num_samples)) if args.csv else range(num_samples)
         rotate_period = (
@@ -443,7 +445,7 @@ if __name__ == "__main__":
             if args.csv and args.max_rows and (i != 0) and (i % args.max_rows) == 0:
                 file_index = file_index + 1
                 log.set_writer(to=fname_param + [f"{file_index:04}"])
-                log.write_header(scale_mode=not args.noscale)
+                log.write_header(scale_mode=not args.noscale, meta=False)
             # Create new CSV with header info when crossing a wall-clock boundary
             if args.csv and args.rotate_secs:
                 current_period = int(time.time() // args.rotate_secs)
@@ -457,7 +459,7 @@ if __name__ == "__main__":
                     log.set_writer(
                         to=[time.strftime("%Y%m%d-%H%M%S", boundary)] + name_suffix
                     )
-                    log.write_header(scale_mode=not args.noscale)
+                    log.write_header(scale_mode=not args.noscale, meta=False)
             log.write(sample_data=sample)
     except KeyboardInterrupt:
         pass
@@ -465,6 +467,5 @@ if __name__ == "__main__":
         logger.error(err)
         exit_code = 1
     accl.goto("config")
-    log.write_footer()
     log.get_dev_status()
     sys.exit(exit_code)

@@ -17,12 +17,14 @@ Epson のセンサー用 Python ライブラリの fork です。Raspberry Pi �
 - `--rotate_secs N`: 時計の N 秒境界で CSV を切り替えます。`--max_rows` とは同時に指定できません。`--max_rows` は行数で区切るので、欠損があると区切りが時刻からずれます。そのため採用しませんでした。
 - `--no_data_timeout N`: データが N 秒届かないと、終了コード 1 で終了します。既定値は 600 秒(ユーザー指定)で、`0` なら無期限に待ちます。実装は `accl_fn.py` の `_get_sample()` と例外クラス `NoDataTimeoutError` です。
 - CSV は最初のサンプルを受信してから作成します。1PPS が途絶したまま再起動を繰り返しても、ヘッダだけの CSV が増えないようにするためです。
+- CSV は列名の行とデータ行だけです。`#` で始まるヘッダ 3 行とフッターは書きません(ユーザー指定)。`helper.write_header(meta=False)` で列名の行だけを書き、`write_footer()` は呼びません。`helper` の既定値は従来どおりなので、`imu_logger` と `vibe_logger` は変わりません。
+- `--rotate_secs` の 2 つ目以降のファイル名は境界の時刻から作ります。時刻を渡さない `time.strftime()` は Linux で粗い時計(C の `time()`)を読み、`time.time()` より数 ms 遅れるので、`050000` が `045959` になっていました。
 
 ## コードの注意点
 
 - `helper.LoggerHelper.set_writer(to=list)` は、渡されたリストを書き換えます(機種名などを `insert` する)。同じリストを使い回さないでください。
 - 変更前の `_get_sample()` は、データが届くまで無期限に待ちます。1PPS が途絶するとセンサーは出力を止めるので、ロガーが止まったままになっていました。`--no_data_timeout` はこの対策です。
-- ロガーは、Ctrl-C(SIGINT)を受けるとセンサーをコンフィグレーションモードに戻し、CSV にフッターを書いて終了します。SIGTERM ではこの処理が走りません。systemd では `KillSignal=SIGINT`、`timeout` では `-s INT` を指定します。
+- ロガーは、Ctrl-C(SIGINT)を受けるとセンサーをコンフィグレーションモードに戻してから終了します。SIGTERM ではこの処理が走りません。systemd では `KillSignal=SIGINT`、`timeout` では `-s INT` を指定します。
 - 同じシリアルポートを 2 つのプロセスが開いても、エラーにならずに奪い合いになります。pyserial の `device reports readiness to read but returned no data (... multiple access on port?)` が出たら、別のロガー(古い crontab など)が動いていないか確認してください。
 - cron や systemd で動かすときは `TQDM_DISABLE=1` を付けます(tqdm 4.66 以降)。付けないと進捗バーがログを埋めます。
 

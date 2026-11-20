@@ -66,9 +66,10 @@ class LoggerHelper:
     write(sample_data)
         Write list or tuple of numbers (representing sensor data) to writer
 
-    write_header(scale_mode=True, start_date=None)
+    write_header(scale_mode=True, start_date=None, meta=True)
         Write rows of header info to writer and
         increment internal sample counter
+        If meta=False, write only the column name row
 
     write_footer(end_date=None)
         Write rows of footer info to writer
@@ -182,7 +183,7 @@ class LoggerHelper:
         except KeyboardInterrupt:
             pass
 
-    def write_header(self, scale_mode=True, start_date=None):
+    def write_header(self, scale_mode=True, start_date=None, meta=True):
         """Writes the header rows to the writer object
 
         Parameters
@@ -191,6 +192,9 @@ class LoggerHelper:
             Some minor differences in header between scale_mode is True or False
         start_date : datetime object
             datetime of current time, if None then grab current datetime
+        meta : bool
+            If False, write only the column name row and omit the "#" rows
+            of device and scale factor info
         Returns
         -------
         None
@@ -424,7 +428,10 @@ class LoggerHelper:
                 # Raw Digital Mode
                 for key in self.dev_burst_fields:
                     header4.append(map_cols_unscaled.get(key))
-            self._csv_writer.writerows([header1, header2, header3, header4])
+            if meta:
+                self._csv_writer.writerows([header1, header2, header3, header4])
+            else:
+                self._csv_writer.writerow(header4)
         except KeyboardInterrupt:
             pass
 
