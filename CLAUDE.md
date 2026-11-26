@@ -6,9 +6,10 @@ Epson のセンサー用 Python ライブラリの fork です。Raspberry Pi �
 
 - `origin` はユーザーの fork(`hitoshimukai/py_esensorlib`)です。fetch は HTTPS、push は SSH(`git@github.com:hitoshimukai/py_esensorlib.git`)です。この Mac には HTTPS の認証情報がなく、`gh` も入っていません。
 - `upstream` は元の配布元(`cubicleguy/py_esensorlib`)です。push 権限はありません。
-- 作業ブランチは `feature/rotate-secs` で、fork に push 済みです。`main` は upstream と同じ状態です。
+- 作業ブランチだった `feature/rotate-secs` は、2026-11-26 に `main` へマージしました。`main` は upstream に fork の変更を加えた状態です。
 - commit と push は、ユーザーに頼まれたときだけ行います。
 - ソースと `README.md` の改行コードは CRLF です。編集しても CRLF を保ってください。LF に変わると diff が全行になります。
+- `README.md` は fork で追加・変更した部分だけを日本語で説明しています。fork 元の説明は、fork 元の README へのリンクで済ませています。
 
 ## 追加した機能(`accl_logger` のみ)
 

@@ -56,13 +56,9 @@
 
 既定値は従来と同じ出力なので、`imu_logger` と `vibe_logger` の CSV は変わりません。
 
-### `README.md`(ACCL Help Screen)
+### `README.md`
 
-| 行 | 変更内容 |
-|---|---|
-| 647 | usage に 2 つのオプションを追記 |
-| 683-685 | `--no_data_timeout` の説明を追加 |
-| 711-713 | `--rotate_secs` の説明を追加 |
+fork 元の内容を削除し、fork で追加・変更した部分だけを説明する内容に書き換えました(2026-11-26)。fork 元の説明は、README からリンクしている fork 元の README を参照します。
 
 ## 新オプションを指定しなくても変わる動作(`accl_logger` のみ)
 
